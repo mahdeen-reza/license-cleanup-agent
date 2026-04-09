@@ -47,7 +47,25 @@ app.get('/health', (_req: Request, res: Response) => {
 // ─── Public routes (before auth middleware) ──────────────────────────────────
 app.use('/api/auth', authRouter);
 
-// ─── Auth middleware — applied globally to all remaining routes ──────────────
+// ─── React frontend — static serving in production ───────────────────────────
+// Vite outputs to frontend/dist/. In development, use `cd frontend && npm run dev`
+// instead — Vite's dev server proxies /api/* to :8000. This block only activates
+// in production (inside the Docker image) once frontend/dist/ has been built.
+// Must be BEFORE auth middleware so the login page is accessible without a token.
+const distPath = path.join(__dirname, '..', 'frontend', 'dist');
+app.use(express.static(distPath));
+
+// SPA fallback — any non-API route returns index.html so React handles routing.
+// Must be before auth middleware (login page) but skip /api paths.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api')) {
+    next();
+    return;
+  }
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
+// ─── Auth middleware — applied to all /api routes below ─────────────────────
 app.use(authMiddleware);
 
 // ─── API routes ───────────────────────────────────────────────────────────────
@@ -60,19 +78,6 @@ app.use('/api/sporadic-flags', sporadicFlagsRouter);
 app.use('/api/user-history', userHistoryRouter);
 app.use('/api', chatRouter);
 app.use('/api/admin', adminRouter);
-
-// ─── React frontend — static serving in production ───────────────────────────
-// Vite outputs to frontend/dist/. In development, use `cd frontend && npm run dev`
-// instead — Vite's dev server proxies /api/* to :8000. This block only activates
-// in production (inside the Docker image) once frontend/dist/ has been built.
-const distPath = path.join(__dirname, '..', 'frontend', 'dist');
-app.use(express.static(distPath));
-
-// SPA fallback — any non-API route returns index.html so React handles routing.
-// Must use app.use() not app.get('*') — Express 5 dropped bare wildcard support.
-app.use((_req: Request, res: Response) => {
-  res.sendFile(path.join(distPath, 'index.html'));
-});
 
 // ─── Global error handler — prevents stack trace leaks ──────────────────────
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
