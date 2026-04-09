@@ -1,0 +1,10 @@
+services:
+  app:
+    ports:
+      - "3000:8000"
+    volumes:
+      - .:/app
+
+  db:
+    ports:
+      - "5432:5432"

@@ -1,0 +1,34 @@
+# Node / JS
+node_modules/
+npm-debug.log*
+dist/
+build/
+coverage/
+.vscode/
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.env/
+.venv/
+venv/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS / editor
+Thumbs.db
+.idea/

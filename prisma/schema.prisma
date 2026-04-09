@@ -1,0 +1,240 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// ─── App Users (authorization layer) ─────────────────────────────────────────
+
+model AppUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String?
+  role         String   @default("standard")
+  active       Boolean  @default(true)
+  addedBy      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ─── Section 6 — Core Models ─────────────────────────────────────────────────
+
+model System {
+  id               String           @id @default(uuid())
+  name             String           @unique
+  description      String
+  foundationalNote String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  instanceConfigs  InstanceConfig[]
+  reasoningTable   ReasoningTable?
+  analysisRuns     AnalysisRun[]
+}
+
+model InstanceConfig {
+  id               String   @id @default(uuid())
+  systemId         String
+  system           System   @relation(fields: [systemId], references: [id])
+  instanceName     String
+  defaultScope     String
+  thresholds       Json     // { standardDays: 60, urgentDays: 30 }
+  productAlignment Json?    // { matchingProducts: ["Product B"] } — null for Instance A
+  gtmHandling      String   // "consult_required"
+  createdAt        DateTime @default(now())
+}
+
+model ReasoningTable {
+  id               String   @id @default(uuid())
+  systemId         String   @unique
+  system           System   @relation(fields: [systemId], references: [id])
+  content          Json
+  confirmedByEmail String
+  confirmedAt      DateTime
+  version          Int      @default(1)
+  updatedAt        DateTime @updatedAt
+}
+
+model IntegrationPattern {
+  id        String   @id @default(uuid())
+  pattern   String   @unique
+  createdAt DateTime @default(now())
+}
+
+model PriorException {
+  id            String   @id @default(uuid())
+  systemId      String
+  userEmail     String
+  userName      String
+  role          String
+  justification String
+  action        String   // "keep_flag" | "remove_with_confirmation"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([systemId, userEmail])
+}
+
+model SporadicFlag {
+  id               String    @id @default(uuid())
+  systemId         String
+  instanceName     String                           // "Instance A", "Instance B", etc.
+  userEmail        String                           // canonical @company.com email
+  userName         String                           // display name for UI
+  flaggedBy        String                           // email of analyst who flagged
+  flaggedAt        DateTime  @default(now())
+  note             String                           // reason, e.g. "Temporary access for quarter-end AP reconciliation"
+  active           Boolean   @default(true)         // can be deactivated without deleting history
+  removalCount     Int       @default(0)            // how many times removed from this instance
+  lastRemovedAt    DateTime?
+  lastReappearedAt DateTime?
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([userEmail, instanceName])
+}
+
+model UserInstanceHistory {
+  id             String   @id @default(uuid())
+  userEmail      String
+  instanceName   String
+  eventType      String   // "analysis_run" | "actioned" | "deferred" | "sporadic_flagged" | "sporadic_unflagged" | "exception_added" | "chat_override" | "reappeared"
+  eventDate      DateTime @default(now())
+  runId          String?
+  classification String?
+  note           String?
+  actorEmail     String?
+
+  @@index([userEmail, instanceName, eventDate])
+}
+
+model AnalysisRun {
+  id             String           @id @default(uuid())
+  systemId       String
+  system         System           @relation(fields: [systemId], references: [id])
+  instanceName   String
+  cleanupType    String           // "routine" | "on_demand"
+  mode           String           // "standard" | "urgent" | "critical"
+  licensesNeeded Int?
+  ranByEmail     String
+  ranAt          DateTime         @default(now())
+  totalUsers     Int
+  directRemove   Int
+  notifyFirst    Int
+  exEmployees    Int
+  gtmFlagged     Int
+  priorException Int
+  humanReview    Int
+  excluded       Int
+
+  // Delta analysis — links this run to the run it was compared against
+  previousRunId        String?
+  previousRun          AnalysisRun?  @relation("RunComparison", fields: [previousRunId], references: [id])
+  comparedRuns         AnalysisRun[] @relation("RunComparison")
+
+  // Summary counts for delta categories
+  sporadicFlagged      Int           @default(0)
+  reappeared           Int           @default(0)
+  newlyInactive        Int           @default(0)
+  persistentlyInactive Int           @default(0)
+  recovered            Int           @default(0)
+  netNew               Int           @default(0)
+
+  results        AnalysisResult[]
+  chatOverrides  ChatOverride[]
+}
+
+model AnalysisResult {
+  id                 String      @id @default(uuid())
+  runId              String
+  run                AnalysisRun @relation(fields: [runId], references: [id])
+  email              String
+  fullName           String
+  department         String
+  division           String
+  businessTitle      String
+  region             String
+  product            String
+  managerEmail       String
+  onLeave            String
+  workerType         String
+  acquisitionCompany String?
+  sfCreatedDate      String
+  lastActivityDate   String?
+  monthlyActivity    Int?
+  sfLastActivityDate String?
+  sfDaysActive       Int?
+  platformLastDate   String?
+  platformDaysActive Int?
+  permissionSets     String?
+  profile            String?
+  classification     String
+  confidenceLevel    String      // "high" | "medium" | "low"
+  matchTier          Int         // 1 | 3 | unresolved stored as 0
+  reasoning          String      // 1-2 sentence plain English explanation
+
+  // Selective actioning — tracks what the analyst did with this result
+  actionStatus             String    @default("pending") // "pending" | "actioned" | "deferred"
+  actionedAt               DateTime?
+  actionedBy               String?                       // email of analyst who actioned
+  actionNote               String?                       // optional note when deferring or actioning
+
+  // Delta analysis — how this user's status changed vs previous run
+  deltaCategory            String?                       // "newly_inactive" | "persistently_inactive" | "recovered" | "reappeared" | "net_new" | null (baseline)
+  previousClassification   String?                       // classification from previous run, null if no previous run
+}
+
+// ─── Section 9 — Interactive Layer Models ────────────────────────────────────
+
+model ChatOverride {
+  id                     String      @id @default(uuid())
+  runId                  String
+  run                    AnalysisRun @relation(fields: [runId], references: [id])
+  userEmail              String
+  targetUserEmail        String
+  originalClassification String
+  newClassification      String
+  reason                 String
+  createdAt              DateTime    @default(now())
+}
+
+model AccessCriteria {
+  id           String            @id @default(uuid())
+  instanceId   String            @unique
+  instanceName String
+  content      Json              // structured criteria document
+  version      Int               @default(1)
+  updatedAt    DateTime          @updatedAt
+  updatedBy    String
+  versions     CriteriaVersion[]
+}
+
+model CriteriaVersion {
+  id          String         @id @default(uuid())
+  criteriaId  String
+  criteria    AccessCriteria @relation(fields: [criteriaId], references: [id])
+  content     Json           // snapshot of criteria at this version
+  version     Int
+  changedBy   String
+  changeNote  String         // what changed and why
+  createdAt   DateTime       @default(now())
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  contextType String   // "analysis_run" | "criteria"
+  contextId   String   // runId or criteriaId
+  role        String   // "user" | "assistant"
+  content     String
+  userEmail   String?
+  createdAt   DateTime @default(now())
+}
