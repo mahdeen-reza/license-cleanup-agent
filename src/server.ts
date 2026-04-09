@@ -57,12 +57,17 @@ app.use(express.static(distPath));
 
 // SPA fallback — any non-API route returns index.html so React handles routing.
 // Must be before auth middleware (login page) but skip /api paths.
-app.use((req: Request, res: Response, next: NextFunction) => {
+// Express 5: sendFile returns a Promise — must await it so errors don't fall through.
+app.use(async (req: Request, res: Response, next: NextFunction) => {
   if (req.path.startsWith('/api')) {
     next();
     return;
   }
-  res.sendFile(path.join(distPath, 'index.html'));
+  try {
+    await res.sendFile(path.join(distPath, 'index.html'));
+  } catch {
+    next();
+  }
 });
 
 // ─── Auth middleware — applied to all /api routes below ─────────────────────
