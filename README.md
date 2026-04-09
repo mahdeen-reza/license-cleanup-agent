@@ -1,26 +1,15 @@
 # SaaS License Clean-Up Agent
 
-**Status:** Phase 1 -- Salesforce (5 instances)
+An AI-powered web application that automates SaaS license clean-up analysis. Upload two CSVs (usage platform export + HR system data), and the agent classifies every user into one of 9 categories with plain-English reasoning. The analyst reviews the output and selectively confirms actions -- the tool never removes users automatically.
+
+**Built to solve a real problem:** recurring license clean-ups that took ~2 hours of manual spreadsheet work, compressed to minutes with full audit trail and institutional memory that compounds over each run.
+
+> **Live demo:** [license-cleanup-agent.onrender.com](https://license-cleanup-agent.onrender.com) (free tier -- ~30s cold start)
+> Login: `admin@company.com` / `changeme123` | Demo CSVs in [`demo/`](demo/)
 
 ---
 
-Internal web application that automates the analysis phase of SaaS license clean-ups. An analyst uploads two CSV exports (usage platform user data + HR system employee data), selects an instance and mode, and the agent classifies every user into one of 9 categories with plain-English reasoning. The analyst reviews the output and selectively confirms actions -- the tool never removes users automatically.
-
-## Key Features
-
-- **Automated classification** -- 9 user categories (Direct Remove, Notify First, Ex-Employee, GTM Flagged, Cross-Instance Anomaly, Prior Exception, Human Review, Excluded, Unresolved) with per-user reasoning
-- **GTM decision framework** -- Multi-layer classification using Division, Department, Business Title, and Product alignment to protect revenue-facing users
-- **Email normalization** -- Multi-mode cascade resolving usage platform emails to canonical HR system identities, including instance suffix stripping, domain swapping, plus-alias handling, and name-based fallback
-- **Delta analysis** -- run-over-run comparison tracking newly inactive, persistently inactive, recovered, reappeared, and net new users across runs
-- **Selective actioning** -- per-user checkboxes with every accept/defer decision logged for audit
-- **Sporadic access register** -- flags users with temporary/project-based access patterns, tracks removal and re-provisioning history
-- **User history timeline** -- per-user panel showing all past analysis appearances, actions, flags, and chat overrides
-- **Review chat** -- post-analysis conversation for reclassifying users, adding exceptions, flagging sporadic users, and querying results
-- **Living access criteria** -- per-instance criteria documents with versioning and AI-assisted updates
-- **System onboarding** -- self-serve flow for adding new systems (Phase 2), generates a Reasoning Table from sample data
-- **Full audit trail** -- every run, classification, and action decision recorded with user identity
-
-## How It Works
+## What It Does
 
 ```
 Upload CSVs  -->  Parse & Deduplicate  -->  Email Normalization  -->  HR Enrichment
@@ -38,104 +27,189 @@ Exclude new users              GTM Multi-Layer Framework  <--  Prior Exceptions 
                               Confirm Selected  -->  Email List + Audit Log
 ```
 
-## Supported Instances
+### 9 User Classifications
 
-| Instance | Product Filter |
+| Classification | Action |
 |---|---|
-| Instance A | None (all products) |
-| Instance B | Product B |
-| Instance C | Product C |
-| Instance D | Product D |
-| Instance E | Product E |
+| **Direct Remove** | Submit support ticket |
+| **Notify First** | Notification, then 5-7 day window |
+| **Ex-Employee** | Priority ticket -- offboarding failure |
+| **GTM -- Consult Required** | Consult manager before action |
+| **Cross-Instance Anomaly** | Verify business need |
+| **Prior Exception** | Show justification, human decides |
+| **Human Review** | Human verifies borderline case |
+| **Excluded** | Integration/service accounts, new users |
+| **Unresolved** | Manual investigation required |
 
-## Stack
+---
 
-- **Backend:** TypeScript + Express (port 8000)
-- **Frontend:** React + Vite (built and served statically by Express)
-- **Database:** PostgreSQL 15 with Prisma ORM
-- **AI:** Anthropic Claude API for classification reasoning
-- **Auth:** Email-based authentication + AppUser authorization table
-- **Deployment:** Docker Compose (single container)
+## Key Features
 
-## Project Structure
+- **AI-powered classification** with per-user plain-English reasoning (Anthropic Claude API, with deterministic fallback when no API key is configured)
+- **Email normalization cascade** -- 5-mode resolution (instance suffix stripping, domain swapping, plus-alias handling, name-based fallback) to join usage data to HR records
+- **GTM decision framework** -- multi-layer classification using Division > Department > Business Title > Product alignment to protect revenue-facing users
+- **Delta analysis** -- run-over-run comparison tracking newly inactive, persistently inactive, recovered, reappeared, and net new users
+- **Selective actioning** -- per-user checkboxes with every accept/defer decision logged for audit
+- **Sporadic access register** -- flags users with temporary/project-based access patterns, tracks removal and re-provisioning history
+- **User history timeline** -- per-user panel showing all past analysis appearances, actions, flags, and chat overrides
+- **Review chat** -- post-analysis conversation for reclassifying users, adding exceptions, flagging sporadic users, and querying results
+- **Living access criteria** -- per-instance criteria documents with versioning and AI-assisted updates
+- **System onboarding** -- self-serve flow for adding new SaaS systems, generates a Reasoning Table from sample data
+- **Full audit trail** -- every run, classification, and action decision recorded with analyst identity
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | TypeScript, Express 5, Node.js |
+| Frontend | React 19, Vite |
+| Database | PostgreSQL 15, Prisma ORM (14 models) |
+| AI | Anthropic Claude API (optional -- deterministic fallback) |
+| Auth | Email/password with signed tokens + role-based authorization |
+| Deployment | Docker (multi-stage build), Render, Docker Compose |
+
+**~9,000 lines** of TypeScript/React/CSS across 10 API route files, 7 core pipeline modules, 2 intelligence modules, and 13 React components.
+
+---
+
+## Architecture
 
 ```
-license-cleanup-agent/
-├── CLAUDE.md                     # Project context and critical rules
-├── ARCHITECTURE.md               # Technical depth -- schemas, normalization, DB models
-├── PRD.md                        # Product requirements and user flows
-├── docs/RULES_DECISION_TABLE.md  # Analysis logic and GTM framework
-├── Dockerfile                    # Multi-stage build (frontend + backend)
-├── docker-compose.yaml           # Production
-├── docker-compose.dev.yaml       # Local dev overlay
-├── .env.example                  # Environment variable template
-├── prisma/
-│   ├── schema.prisma             # 14 models
-│   └── migrations/               # Committed migrations
-├── src/
-│   ├── server.ts                 # Express app, route mounting, static serving
-│   ├── lib/                      # prisma.ts, ai.ts (Anthropic Claude client)
-│   ├── middleware/                # auth.ts, requireAdmin.ts
-│   ├── routes/                   # auth, me, systems, onboarding, analysis, chat,
-│   │                             #   actioning, sporadicFlags, userHistory, admin
-│   ├── core/                     # emailNormalizer, hrEnricher, classifier,
-│   │                             #   deltaComparison, actionTracker, sporadicFlagService,
-│   │                             #   userHistoryService
-│   └── intelligence/             # foundationalKnowledge, reasoningEngine
-└── frontend/
-    └── src/
-        ├── App.tsx               # Main app with view routing
-        ├── types.ts              # Shared TypeScript types
-        ├── index.css             # Dark mode theme
-        └── components/           # 12 React components
+src/
+├── server.ts                 # Express app, route mounting, static serving
+├── middleware/
+│   ├── auth.ts               # Token verification + AppUser lookup
+│   └── requireAdmin.ts       # Admin-only route guard
+├── routes/                   # 10 route files (auth, analysis, chat, admin, etc.)
+├── core/                     # Pipeline modules
+│   ├── emailNormalizer.ts    # 5-mode email resolution cascade
+│   ├── hrEnricher.ts         # HR system join + GTM classification
+│   ├── classifier.ts         # Rule-based classification engine
+│   ├── deltaComparison.ts    # Run-over-run comparison (5 delta categories)
+│   ├── actionTracker.ts      # Selective actioning + audit logging
+│   ├── sporadicFlagService.ts
+│   └── userHistoryService.ts
+└── intelligence/             # AI layer
+    ├── foundationalKnowledge.ts  # Domain knowledge seeding
+    └── reasoningEngine.ts        # Claude API integration + batch processing
+
+frontend/src/
+├── App.tsx                   # Auth state machine + view routing
+├── lib/api.ts                # Token management + authenticated fetch
+└── components/               # 13 components (results, chat, history, admin, etc.)
 ```
 
-## Deployment
+### Analysis Pipeline (16 steps)
 
-Configured for Docker Compose deployment.
+1. Parse both CSVs
+2. Deduplicate usage platform rows
+3. Exclude new users (< 30 days)
+4. Identify + exclude integration accounts
+5. Run email normalization cascade
+6. Enrich with HR data
+7. Apply GTM decision framework
+8. Apply instance product alignment
+9. Check prior exception register
+10. Check sporadic flag register
+11. Send to AI reasoning engine
+12. Receive classifications + reasoning
+13. Save run + results to DB
+14. Delta comparison vs previous run
+15. Write user history events
+16. Return structured output (7 tabs + delta summary)
 
-1. Create a `.env` file based on `.env.example`
-2. Run `docker compose up -d`
+---
 
-Prisma migrations run automatically on container startup. The Anthropic API key is optional -- the app runs with a mock fallback (all users classified as Human Review) if the key is absent.
+## Running Locally
 
-## Local Development
+### Prerequisites
+
+- Docker and Docker Compose
+- (Optional) Anthropic API key for AI features
+
+### Quick Start
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up -d
+# Clone the repo
+git clone https://github.com/mahdeen-reza/license-cleanup-agent.git
+cd license-cleanup-agent
+
+# Create .env from template
+cp .env.example .env
+
+# Start everything
+docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up
 ```
 
-App available at `http://localhost:3000`. PostgreSQL at `localhost:5432`.
+App at `http://localhost:3000`. PostgreSQL at `localhost:5432`.
 
-After making frontend changes, rebuild locally:
+Prisma migrations and seed data run automatically on startup. Default login: `admin@company.com` / `changeme123`.
+
+### Demo Walkthrough
+
+1. Log in with demo credentials
+2. Upload both CSVs from [`demo/`](demo/) (Instance B, Standard mode, Routine)
+3. Run analysis -- 37 users classified across all 9 categories
+4. Review results across 7 tabs, check users for action
+5. Open User History panel on any row
+6. Try the Review Chat to reclassify or query results
+7. Visit Knowledge Base to view access criteria
+
+See [`demo/README.md`](demo/README.md) for expected results and edge cases covered.
+
+### Without Docker
 
 ```bash
-cd frontend && npm run build
+npm install
+npx prisma migrate deploy
+npx prisma db seed
+npm run build          # builds frontend
+npm start              # starts Express on port 8000
 ```
 
-The dev overlay volume-mounts the project directory into the container, so the rebuilt `frontend/dist/` is picked up immediately.
+Requires a PostgreSQL instance and `DATABASE_URL` in `.env`.
+
+---
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `POSTGRES_USER` | Yes | Database user (used by db service) |
-| `POSTGRES_PASSWORD` | Yes | Database password (used by db service) |
-| `POSTGRES_DB` | Yes | Database name (used by db service) |
+| `TOKEN_SECRET` | Yes | Secret for signing auth tokens |
 | `NODE_ENV` | Yes | `production` or `development` |
-| `ANTHROPIC_API_KEY` | No | Anthropic API key -- app runs with mock fallback if absent |
-| `DEV_USER_EMAIL` | No | Fallback email for local dev only |
+| `ANTHROPIC_API_KEY` | No | Enables AI classification -- deterministic fallback without it |
+| `ANTHROPIC_MODEL` | No | Model ID (default: `claude-sonnet-4-20250514`) |
+| `DEV_USER_EMAIL` | No | Auto-login fallback for local dev |
 
-## Auth
+---
 
-Two layers:
+## Design Decisions
 
-1. **Authentication** -- Identity extracted from request header or `DEV_USER_EMAIL` fallback in development.
-2. **App-level authorization** -- Users must be provisioned in the `AppUser` table. Two roles: `admin` (full app + user management) and `standard` (full app usage).
+- **HR-system-primary** -- HR data is authoritative for all employee information, overriding usage platform fields
+- **Conservative by design** -- borderline cases route to Human Review. Wrong removal cost > missed removal cost.
+- **Reasoning on every user** -- plain English explanation stored in DB, defensible in escalations
+- **Selective actioning** -- analyst curates action list per-user, never bulk. Every accept/defer logged.
+- **Delta analysis compounds memory** -- each run builds on the last. Review surface shrinks over time.
+- **Sporadic != Exception** -- sporadic users get removed when inactive (correct) but the tool remembers the pattern. Exceptions are protected entirely.
+- **AI is optional** -- the app runs fully without an API key using deterministic classification
 
-In local development, the `DEV_USER_EMAIL` env var is used as fallback when the auth header is absent, and a missing AppUser is auto-created as admin.
+---
 
-## Phase 2
+## Project Documentation
 
-Expand to additional systems using the self-serve onboarding flow built in Phase 1. Same app, same infrastructure -- no new deployment required.
+| File | Purpose |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Project context, critical rules, and constraints |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Full technical reference -- schemas, normalization, DB models, API routes |
+| [`PRD.md`](PRD.md) | Product requirements, user flows, success metrics |
+| [`docs/RULES_DECISION_TABLE.md`](docs/RULES_DECISION_TABLE.md) | Complete analysis logic, GTM framework, classification rules |
+| [`demo/README.md`](demo/README.md) | Demo data documentation with expected results |
+
+---
+
+## License
+
+[MIT](LICENSE)

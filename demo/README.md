@@ -6,7 +6,7 @@ Sample CSV files for running a full analysis cycle on **Instance B** (Product B 
 
 | File | Description |
 |---|---|
-| `usage_platform_instance_b.csv` | Usage platform export — 37 users with Salesforce metadata and activity signals |
+| `usage_platform_instance_b.csv` | Usage platform export — 37 users with license metadata and activity signals |
 | `hr_system_export.csv` | HR system export — 34 employee records (active + terminated + ambiguous) |
 
 ## How to Use
@@ -40,7 +40,7 @@ Sample CSV files for running a full analysis cycle on **Instance B** (Product B 
 ### Ex-Employee (4)
 | User | Reason |
 |---|---|
-| michael.roberts@company.com | HR shows terminated 2026-02-15, still in Salesforce |
+| michael.roberts@company.com | HR shows terminated 2026-02-15, still in usage platform |
 | jessica.lee@company.com | HR shows terminated 2026-01-30 |
 | pat.morrison@acquired-corp.com | Legacy email, Candidate D domain-swap resolves to terminated HR record (AcquiredCorp) |
 | thomas.wilson@company.com | HR shows terminated 2026-03-01 |

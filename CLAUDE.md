@@ -8,7 +8,7 @@
 
 A web app that automates the analysis phase of SaaS license clean-ups. Analyst uploads two CSVs (usage platform export + HR system export), selects instance and mode, and the agent classifies every user into one of 9 categories with plain-English reasoning. Analyst reviews output before taking any action.
 
-**Phase 1:** Salesforce only (5 instances). Manual file upload. Analysis + output only.  
+**Phase 1:** Single platform (5 instances). Manual file upload. Analysis + output only.  
 **Phase 2:** Add more systems via self-serve onboarding flow built in Phase 1.  
 **Never:** Auto-remove users, auto-submit tickets, auto-notify. All actions require human review.
 

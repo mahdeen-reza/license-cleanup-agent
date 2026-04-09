@@ -43,7 +43,7 @@ This takes ~2 focused hours and ~1 full business day end-to-end due to competing
 - Scheduling or triggering clean-ups automatically
 - Pulling data directly from usage platform or HR system APIs
 - Exposing APIs for other internal services to consume
-- Supporting systems other than Salesforce in Phase 1
+- Supporting systems other than the initial platform in Phase 1
 
 ---
 
@@ -258,7 +258,7 @@ Usage platform and HR system data is uploaded manually. Ticket submission is man
 - Analysis run history and audit log
 
 **Out of scope (Phase 1):**
-- Non-Salesforce systems (Phase 2)
+- Additional systems (Phase 2)
 - Automated ticket submission
 - Automated notifications
 - Scheduled/recurring analysis triggers
