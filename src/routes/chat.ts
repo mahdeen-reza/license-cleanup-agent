@@ -15,7 +15,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { invokeModel } from '../lib/ai';
+import { invokeModel, isAIConfigured } from '../lib/ai';
 import { SEED_FOUNDATIONAL_KNOWLEDGE } from '../intelligence/foundationalKnowledge';
 import { createSporadicFlag } from '../core/sporadicFlagService';
 import type { Classification } from '../core/classifier';
@@ -78,7 +78,17 @@ router.post('/analysis/:runId/chat', async (req: Request, res: Response) => {
   const systemPrompt = buildReviewChatSystemPrompt(run, history);
   const fullPrompt = `${systemPrompt}\n\n## Analyst message\n${message.trim()}`;
 
-  const rawResponse = await invokeModel(fullPrompt);
+  let rawResponse: string;
+  if (!isAIConfigured()) {
+    rawResponse = 'AI provider is not configured. Chat features require an Anthropic API key. The analysis pipeline uses deterministic classification when running without AI.';
+  } else {
+    try {
+      rawResponse = await invokeModel(fullPrompt);
+    } catch (err) {
+      console.warn('Chat AI call failed:', err);
+      rawResponse = 'AI request failed. Please try again or check that the Anthropic API key is valid.';
+    }
+  }
 
   // Parse the AI model's structured response
   const action = parseReviewChatAction(rawResponse);
@@ -266,7 +276,17 @@ router.post('/criteria/:systemId/chat', async (req: Request, res: Response) => {
 
   // Draft mode — ask the AI model to propose the update
   const prompt = buildCriteriaChatPrompt(systemId, currentContent, history, message.trim());
-  const draft = await invokeModel(prompt);
+  let draft: string;
+  if (!isAIConfigured()) {
+    draft = 'AI provider is not configured. Criteria editing via chat requires an Anthropic API key.';
+  } else {
+    try {
+      draft = await invokeModel(prompt);
+    } catch (err) {
+      console.warn('Criteria chat AI call failed:', err);
+      draft = 'AI request failed. Please try again or check that the Anthropic API key is valid.';
+    }
+  }
 
   await saveChatMessage('criteria', systemId, 'assistant', draft, undefined);
 

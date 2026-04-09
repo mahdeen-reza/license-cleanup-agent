@@ -15,7 +15,7 @@ import userHistoryRouter from './routes/userHistory';
 import adminRouter from './routes/admin';
 
 const app = express();
-const port = 8000;
+const port = parseInt(process.env.PORT ?? '8000', 10);
 
 // ─── Security headers ────────────────────────────────────────────────────────
 app.disable('x-powered-by');
