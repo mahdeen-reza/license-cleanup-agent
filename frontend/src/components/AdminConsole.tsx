@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { MeResponse, AppUser } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface Props {
   currentUser: MeResponse;
@@ -49,7 +50,7 @@ function AdminPanel({ currentUser }: { currentUser: MeResponse }) {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('/api/admin/users');
+      const res = await apiFetch('/api/admin/users');
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
         setError(err.error ?? 'Failed to load users.');
@@ -118,7 +119,7 @@ function AddUserForm({ onSuccess, onError }: { onSuccess: () => void; onError: (
     setSubmitting(true);
     onError('');
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await apiFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, role }),
@@ -302,7 +303,7 @@ function EditRow({
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/users/${user.id}`, {
+      const res = await apiFetch(`/api/admin/users/${user.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, role }),
@@ -369,7 +370,7 @@ async function toggleActive(
   }
 
   try {
-    const res = await fetch(`/api/admin/users/${user.id}`, {
+    const res = await apiFetch(`/api/admin/users/${user.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !user.active }),

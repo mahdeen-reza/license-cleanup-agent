@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReasoningTableContent } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface Props {
   name: string;
@@ -70,7 +71,7 @@ export default function ReasoningTableReview({
 
     setLoading(true);
     try {
-      const res = await fetch('/api/systems/onboard/confirm', {
+      const res = await apiFetch('/api/systems/onboard/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description, foundationalNote: description, reasoningTable: finalRt }),

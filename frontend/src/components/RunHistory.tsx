@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { HistoryRun } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface Props {
   onSelectRun: (runId: string) => void;
@@ -11,7 +12,7 @@ export default function RunHistory({ onSelectRun }: Props) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/analysis/history')
+    apiFetch('/api/analysis/history')
       .then(r => r.json() as Promise<HistoryRun[]>)
       .then(setRuns)
       .catch(() => setError('Failed to load history.'))

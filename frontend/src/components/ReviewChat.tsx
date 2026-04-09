@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { apiFetch } from '../lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -33,7 +34,7 @@ export default function ReviewChat({ runId }: Props) {
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/analysis/${runId}/chat`, {
+      const res = await apiFetch(`/api/analysis/${runId}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),

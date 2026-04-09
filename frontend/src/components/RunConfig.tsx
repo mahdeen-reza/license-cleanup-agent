@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { RunResult, SfInstance, CleanupMode, CleanupType } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface Props {
   onRunComplete: (result: RunResult) => void;
@@ -40,7 +41,7 @@ export default function RunConfig({ onRunComplete }: Props) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/analysis/run', { method: 'POST', body: form });
+      const res = await apiFetch('/api/analysis/run', { method: 'POST', body: form });
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText })) as { error?: string };
         throw new Error(body.error ?? `HTTP ${res.status}`);

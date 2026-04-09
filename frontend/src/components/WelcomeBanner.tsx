@@ -8,6 +8,7 @@ interface Props {
   role: 'admin' | 'standard';
   currentView: View;
   onNav: (view: View) => void;
+  onLogout: () => void;
 }
 
 const NAV_ITEMS: Array<{ view: View; label: string }> = [
@@ -17,7 +18,7 @@ const NAV_ITEMS: Array<{ view: View; label: string }> = [
   { view: 'history', label: 'Run History' },
 ];
 
-export default function WelcomeBanner({ email, name, role, currentView, onNav }: Props) {
+export default function WelcomeBanner({ email, name, role, currentView, onNav, onLogout }: Props) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -130,6 +131,26 @@ export default function WelcomeBanner({ email, name, role, currentView, onNav }:
                 Admin Console
               </button>
             )}
+
+            <button
+              onClick={() => { setDropdownOpen(false); onLogout(); }}
+              style={{
+                display: 'block',
+                width: '100%',
+                border: 'none',
+                borderTop: '1px solid #444',
+                background: 'transparent',
+                color: '#a0a0a0',
+                fontSize: 13,
+                padding: '13px 18px',
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#3a3a3a')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              Sign Out
+            </button>
           </div>
         )}
       </div>

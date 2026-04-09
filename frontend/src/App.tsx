@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { MeResponse, RunResult } from './types';
+import { apiFetch, setToken, clearToken } from './lib/api';
 import WelcomeBanner from './components/WelcomeBanner';
 import RunConfig from './components/RunConfig';
 import AnalysisResults from './components/AnalysisResults';
@@ -7,11 +8,12 @@ import ReviewChat from './components/ReviewChat';
 import KnowledgeBase from './components/KnowledgeBase';
 import RunHistory from './components/RunHistory';
 import SystemOnboarder from './components/SystemOnboarder';
+import LoginPage from './components/LoginPage';
 import AccessDenied from './components/AccessDenied';
 import AdminConsole from './components/AdminConsole';
 
 type View = 'analysis' | 'knowledge' | 'onboard' | 'history' | 'admin';
-type AuthStatus = 'loading' | 'authenticated' | 'denied';
+type AuthStatus = 'loading' | 'unauthenticated' | 'authenticated' | 'denied';
 
 export default function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
@@ -22,9 +24,14 @@ export default function App() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch('/api/me')
+  const fetchMe = useCallback(() => {
+    setAuthStatus('loading');
+    apiFetch('/api/me')
       .then(async (r) => {
+        if (r.status === 401) {
+          setAuthStatus('unauthenticated');
+          return;
+        }
         if (r.status === 403) {
           setAuthStatus('denied');
           return;
@@ -34,8 +41,21 @@ export default function App() {
         setUser(data);
         setAuthStatus('authenticated');
       })
-      .catch(() => setAuthStatus('denied'));
+      .catch(() => setAuthStatus('unauthenticated'));
   }, []);
+
+  useEffect(() => { fetchMe(); }, [fetchMe]);
+
+  function handleLogin(token: string) {
+    setToken(token);
+    fetchMe();
+  }
+
+  function handleLogout() {
+    clearToken();
+    setUser(null);
+    setAuthStatus('unauthenticated');
+  }
 
   function handleRunComplete(result: RunResult) {
     setRunResult(result);
@@ -55,7 +75,7 @@ export default function App() {
     setHistoryError(null);
     setHistoryRunResult(null);
     try {
-      const res = await fetch(`/api/analysis/${runId}`);
+      const res = await apiFetch(`/api/analysis/${runId}`);
       if (!res.ok) {
         const err = await res.json();
         setHistoryError(err.error ?? 'Failed to load run details.');
@@ -80,6 +100,10 @@ export default function App() {
     );
   }
 
+  if (authStatus === 'unauthenticated') {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   if (authStatus === 'denied' || !user) {
     return <AccessDenied />;
   }
@@ -94,6 +118,7 @@ export default function App() {
         role={user.role}
         currentView={currentView}
         onNav={handleNav}
+        onLogout={handleLogout}
       />
 
       <main style={{ flex: 1, padding: '20px 24px', maxWidth: 1400, width: '100%', margin: '0 auto' }}>

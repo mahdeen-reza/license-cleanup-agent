@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../lib/api';
 
 // ─── Types (mirroring backend response) ─────────────────────────────────────
 
@@ -97,7 +98,7 @@ export default function UserHistoryPanel({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `/api/user-history/${encodeURIComponent(userEmail)}/${encodeURIComponent(instanceName)}`,
       );
       if (!res.ok) {
@@ -121,7 +122,7 @@ export default function UserHistoryPanel({
     if (!flagNote.trim()) return;
     setFlagSubmitting(true);
     try {
-      const res = await fetch('/api/sporadic-flags', {
+      const res = await apiFetch('/api/sporadic-flags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,7 +144,7 @@ export default function UserHistoryPanel({
   };
 
   const handleDeactivateFlag = async (flagId: string) => {
-    const res = await fetch(`/api/sporadic-flags/${flagId}`, {
+    const res = await apiFetch(`/api/sporadic-flags/${flagId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: false }),

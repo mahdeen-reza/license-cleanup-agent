@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Markdown from 'react-markdown';
 import type { AccessCriteria, SystemRecord } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -86,7 +87,7 @@ export default function KnowledgeBase() {
   const [criteriaOpen, setCriteriaOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/systems')
+    apiFetch('/api/systems')
       .then(r => r.json() as Promise<SystemRecord[]>)
       .then((data) => {
         setSystems(data);
@@ -109,7 +110,7 @@ export default function KnowledgeBase() {
   async function loadCriteria(systemId: string) {
     setLoading(true);
     try {
-      const res = await fetch(`/api/criteria/${encodeURIComponent(systemId)}`);
+      const res = await apiFetch(`/api/criteria/${encodeURIComponent(systemId)}`);
       const data = await res.json() as AccessCriteria;
       setCriteria(data);
     } finally {
@@ -128,7 +129,7 @@ export default function KnowledgeBase() {
     setPendingConfirm(false);
 
     try {
-      const res = await fetch(`/api/criteria/${encodeURIComponent(selectedSystemId)}/chat`, {
+      const res = await apiFetch(`/api/criteria/${encodeURIComponent(selectedSystemId)}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, confirm }),
@@ -158,7 +159,7 @@ export default function KnowledgeBase() {
     setShowDocs(false);
     setDocsMarkdown(null);
     try {
-      const res = await fetch(`/api/systems/${matchingSystem.id}/generate-docs`, {
+      const res = await apiFetch(`/api/systems/${matchingSystem.id}/generate-docs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format: 'detailed' }),

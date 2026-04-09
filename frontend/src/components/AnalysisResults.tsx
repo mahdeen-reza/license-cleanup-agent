@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { RunResult, AnalysisResultRow } from '../types';
+import { apiFetch } from '../lib/api';
 import UserHistoryPanel from './UserHistoryPanel';
 
 type DeltaFilter = 'newly_inactive' | 'persistently_inactive' | 'recovered' | 'reappeared' | 'net_new' | null;
@@ -173,7 +174,7 @@ export default function AnalysisResults({ result, isHistoryView = false }: Props
         status: tabSelected.has(row.id) ? 'actioned' as const : 'deferred' as const,
       }));
 
-      const res = await fetch(`/api/analysis/${result.runId}/action`, {
+      const res = await apiFetch(`/api/analysis/${result.runId}/action`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actions }),

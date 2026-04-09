@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReasoningTableContent } from '../types';
+import { apiFetch } from '../lib/api';
 import ReasoningTableReview from './ReasoningTableReview';
 
 interface Props {
@@ -36,7 +37,7 @@ export default function SystemOnboarder({ onConfirmed }: Props) {
       fd.append('usageFile', usageFile);
       if (pastFile) fd.append('pastAnalysisFile', pastFile);
 
-      const res = await fetch('/api/systems/onboard', { method: 'POST', body: fd });
+      const res = await apiFetch('/api/systems/onboard', { method: 'POST', body: fd });
       if (!res.ok) {
         const err = await res.json() as { error: string };
         setError(err.error ?? 'Generation failed.');
