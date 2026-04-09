@@ -194,6 +194,50 @@ async function main() {
 
   console.log(`  AppUser (admin): ${adminUser.email} (${adminUser.id})`);
 
+  // ─── 6. AppUser — demo analyst ──────────────────────────────────────────────
+
+  const analystUser = await prisma.appUser.upsert({
+    where: { email: 'analyst@company.com' },
+    update: {},
+    create: {
+      email: 'analyst@company.com',
+      name: 'Demo Analyst',
+      passwordHash: hashPassword('demo123'),
+      role: 'standard',
+      addedBy: 'system',
+    },
+  });
+
+  console.log(`  AppUser (analyst): ${analystUser.email} (${analystUser.id})`);
+
+  // ─── 7. SporadicFlag — demo example ────────────────────────────────────────
+  // Demonstrates the sporadic/temporary access pattern for a user on Instance B.
+
+  const sporadicEmail = 'sarah.anderson@company.com';
+  const existingSporadic = await prisma.sporadicFlag.findUnique({
+    where: { userEmail_instanceName: { userEmail: sporadicEmail, instanceName: 'Instance B' } },
+  });
+
+  if (!existingSporadic) {
+    await prisma.sporadicFlag.create({
+      data: {
+        systemId: system.id,
+        instanceName: 'Instance B',
+        userEmail: sporadicEmail,
+        userName: 'Sarah Anderson',
+        flaggedBy: 'analyst@company.com',
+        note: 'Temporary access for quarterly business reviews — uses CRM dashboards for 2-3 weeks each quarter, then goes inactive.',
+        active: true,
+        removalCount: 1,
+        lastRemovedAt: new Date('2025-10-15'),
+        lastReappearedAt: new Date('2025-12-20'),
+      },
+    });
+    console.log(`  SporadicFlag: ${sporadicEmail} on Instance B (created)`);
+  } else {
+    console.log(`  SporadicFlag: ${sporadicEmail} on Instance B (existing — skipped)`);
+  }
+
   console.log('\nSeed complete.');
 }
 
