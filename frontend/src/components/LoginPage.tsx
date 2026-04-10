@@ -50,7 +50,7 @@ export default function LoginPage({ onLogin }: Props) {
     }}>
       <div className="card" style={{ maxWidth: 400, width: '100%', padding: '40px 32px' }}>
         <span style={{ fontSize: 18, fontWeight: 700, color: '#7c93c3', display: 'block', marginBottom: 8, textAlign: 'center' }}>
-          License Clean-Up Agent
+          SaaS License Clean-Up Agent
         </span>
         <p style={{ fontSize: 12, color: '#a0a0a0', textAlign: 'center', marginBottom: 28 }}>
           {mode === 'login' ? 'Sign in to continue' : 'Create an account'}

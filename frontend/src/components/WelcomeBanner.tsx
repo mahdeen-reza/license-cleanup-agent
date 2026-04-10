@@ -45,7 +45,7 @@ export default function WelcomeBanner({ email, name, role, currentView, onNav, o
       gap: 32,
     }}>
       <span style={{ fontWeight: 700, fontSize: 29, color: '#7c93c3', whiteSpace: 'nowrap', lineHeight: 1, marginBottom: 2 }}>
-        IS License Clean-Up Agent
+        SaaS License Clean-Up Agent
       </span>
 
       <nav style={{ display: 'flex', gap: 4, flex: 1 }}>

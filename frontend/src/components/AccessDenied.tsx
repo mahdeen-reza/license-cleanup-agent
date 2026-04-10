@@ -13,7 +13,7 @@ export default function AccessDenied() {
         padding: '40px 32px',
       }}>
         <span style={{ fontSize: 18, fontWeight: 700, color: '#7c93c3', display: 'block', marginBottom: 24 }}>
-          IS License Clean-Up Agent
+          SaaS License Clean-Up Agent
         </span>
 
         <h1 style={{ fontSize: 20, fontWeight: 600, color: '#f0f0f0', marginBottom: 12 }}>
