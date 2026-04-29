@@ -436,26 +436,25 @@ Includes stale run detection — runs processing for more than 20 minutes are re
 ### Foundational Knowledge
 Stored in DB, loaded as system prompt context. Covers generalizable inactivity principles -- enables reasoning about new systems without starting from scratch.
 
-### AI Reasoning Engine
+### Reasoning Engine (Anthropic API)
 ```typescript
 // src/intelligence/reasoningEngine.ts
-const prompt = buildAnalysisPrompt({
+const systemContext = buildSystemContext(
   foundationalKnowledge,  // from DB
-  reasoningTable,         // instance-specific, from DB
   instanceConfig,         // thresholds, product alignment, gtmHandling
-  priorExceptions,        // exception register for this instance
-  enrichedUsers,          // usage platform + HR joined data
   runConfig,              // mode, cleanupType, licensesNeeded
-});
+  priorExceptions,        // exception register for this instance
+);
 
-const response = await aiClient.invoke({
-  model: process.env.AI_MODEL_ID,
-  messages: [{ role: 'user', content: prompt }],
-  max_tokens: 4096,
+const response = await client.messages.create({
+  model: MODEL_ID,
+  max_tokens: 5000,
+  system: [{ type: 'text', text: systemContext, cache_control: { type: 'ephemeral' } }],
+  messages: [{ role: 'user', content: userBatchPayload }],
 });
 ```
 
-Batch size is configurable via the BATCH_SIZE constant in src/intelligence/reasoningEngine.ts. Each batch = one AI API call.
+Batch size is set to 50 users per API call, with up to 8 batches running in parallel (BATCH_SIZE and CONCURRENCY constants in src/intelligence/reasoningEngine.ts). For a typical large instance (~1700 users) this means ~34 batches completing in ~5 rounds of 8, reducing the AI step from ~8 minutes (sequential) to ~1 minute. The static system context is cached across all batches via Anthropic's prompt caching — first batch pays full price + cache write; subsequent batches pay ~10% for the cached portion. Per-user data is sent in compact pipe-delimited tabular format to reduce input tokens.
 
 ### Per-User Output from AI
 ```typescript
@@ -524,30 +523,35 @@ model ChatMessage {
 }
 ```
 
-### POST /api/analysis/run -- Pipeline Steps
+### POST /api/analysis/run — Pipeline Steps
+Pipeline runs asynchronously after the POST returns 202. Progress is reported via `statusDetail` field on the AnalysisRun record, polled by `GET /api/analysis/:runId/status`.
+
 ```
-1. Parse both CSVs (csv-parse)
+0. Create AnalysisRun record with status="processing", return 202 immediately
+1. Parse both CSVs (csv-parse) + enrich users
 2. Deduplicate usage platform rows (especially connector duplicates)
 3. Exclude new users (createdDate < 30 days)
 4. Identify + exclude integration users
 5. Run email normalization cascade for all remaining users
 6. Enrich matched users with HR data
-7. Apply GTM decision framework (multi-layer)
-8. Apply instance product alignment (non-Instance A)
+7. Apply GTM decision framework (4 layers)
+8. Apply instance product alignment
 9. Check prior exception register
-10. Check sporadic flag register -- tag users with known temporary access patterns
-11. Send enriched dataset to AI reasoning engine
-12. Receive classifications + reasoning per user
-13. Save run + results to DB
-14. Delta comparison (if previous run exists for this instance):
+10. Check sporadic flag register — tag users with known temporary access patterns
+11. Run deterministic pre-classification
+12. Send enriched dataset to AI reasoning engine (batches of 50 users, 8 batches in parallel)
+    — statusDetail updated as batches complete: "AI reasoning: batch N of M"
+13. Receive classifications + reasoning per user
+14. Save results to DB
+15. Delta comparison (if previous run exists for this instance):
     a. Look up most recent completed run for this instance
     b. Set previousRunId on current run
     c. Join current results to previous results on email
     d. Tag each result with deltaCategory + previousClassification
     e. Compute and store delta summary counts on AnalysisRun
     f. If no previous run -> baseline run, all deltaCategory = null
-15. Write UserInstanceHistory events for all classified users
-16. Return structured output (7 tabs + delta summary)
+16. Write UserInstanceHistory events for all classified users
+17. Mark run status="completed"
 ```
 
 ### POST /api/analysis/:runId/action -- Selective Actioning
@@ -566,6 +570,27 @@ model ChatMessage {
 // 2. Write UserInstanceHistory event per user ("actioned" or "deferred")
 // 3. For actioned sporadic users: increment removalCount, set lastRemovedAt on SporadicFlag
 // 4. Return updated result counts + copyable email list for actioned users
+```
+
+### PUT /api/analysis/:runId/check — Toggle Single Checkbox
+```typescript
+// Request body
+{ resultId: string; checked: boolean }
+
+// Processing:
+// Sets actionStatus to "actioned" (checked=true) or "pending" (checked=false)
+// Does NOT write audit events — those are written at submission time
+```
+
+### POST /api/analysis/:runId/submit — Record Ticket Number and Finalize
+```typescript
+// Request body
+{ ticketNumber: string }  // e.g. "TICKET-1234"
+
+// Processing:
+// 1. Validate ticket number format
+// 2. Update reviewStatus to "submitted", record ticketNumber + submittedAt
+// 3. Write UserInstanceHistory events for all actioned/deferred users
 ```
 
 ### GET /api/user-history/:email/:instanceName -- User History Timeline
