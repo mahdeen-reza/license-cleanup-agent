@@ -254,6 +254,8 @@ model PriorException {
   action        String   // "keep_flag" | "remove_with_confirmation"
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  @@unique([systemId, userEmail])
 }
 
 model AnalysisRun {
@@ -266,14 +268,22 @@ model AnalysisRun {
   licensesNeeded Int?
   ranByEmail     String
   ranAt          DateTime         @default(now())
-  totalUsers     Int
-  directRemove   Int
-  notifyFirst    Int
-  exEmployees    Int
-  gtmFlagged     Int
-  priorException Int
-  humanReview    Int
-  excluded       Int
+  totalUsers     Int              @default(0)
+  directRemove   Int              @default(0)
+  notifyFirst    Int              @default(0)
+  exEmployees    Int              @default(0)
+  gtmFlagged     Int              @default(0)
+  priorException Int              @default(0)
+  humanReview    Int              @default(0)
+  excluded       Int              @default(0)
+  // Async pipeline status tracking
+  status        String   @default("completed")  // "processing" | "completed" | "failed"
+  statusDetail  String?                          // e.g. "AI reasoning: batch 5 of 34"
+  errorMessage  String?                          // populated on failure
+  // Review lifecycle (independent of pipeline status)
+  reviewStatus  String    @default("in_progress")  // "in_progress" | "submitted"
+  ticketNumber  String?                             // e.g. "TICKET-1234"
+  submittedAt   DateTime?
   // Delta analysis
   previousRunId        String?
   previousRun          AnalysisRun?  @relation("RunComparison", fields: [previousRunId], references: [id])
@@ -285,6 +295,7 @@ model AnalysisRun {
   recovered            Int           @default(0)
   netNew               Int           @default(0)
   results        AnalysisResult[]
+  chatOverrides  ChatOverride[]
 }
 
 model AnalysisResult {
@@ -368,11 +379,15 @@ GET  /api/systems                      <- List registered systems + instances
 POST /api/systems/onboard              <- New system onboarding (Phase 2)
 POST /api/systems/onboard/confirm      <- Confirm reviewed Reasoning Table + save system
 POST /api/systems/:systemId/generate-docs <- Generate formal Markdown documentation for a system
-POST /api/analysis/run                 <- Main analysis pipeline
-GET  /api/analysis/history             <- Audit log (includes systemName per run)
+POST /api/analysis/run                 <- Start analysis pipeline (returns 202, runs async)
+GET  /api/analysis/:runId/status       <- Lightweight polling for pipeline progress
+GET  /api/analysis/in-progress         <- In-progress runs for current user (review not yet submitted)
+GET  /api/analysis/history             <- Audit log -- completed + submitted runs
 GET  /api/analysis/:runId              <- Full details of a past run
 GET  /api/analysis/:runId/delta        <- Delta summary for a run (vs previous)
-POST /api/analysis/:runId/action       <- Selective actioning -- mark checked users as actioned/deferred
+PUT  /api/analysis/:runId/check        <- Toggle single result checkbox (real-time persistence)
+POST /api/analysis/:runId/action       <- Batch actioning decisions
+POST /api/analysis/:runId/submit       <- Record ticket number and finalize the run
 POST /api/analysis/:runId/chat         <- Review conversation (reclassify, add exception, query)
 GET  /api/criteria/:systemId           <- Access criteria document for a system
 POST /api/criteria/:systemId/chat      <- Criteria update conversation
@@ -396,6 +411,23 @@ PUT  /api/admin/users/:id             <- Update user name/role/active (admin onl
   hrFile: File;             // multipart CSV
 }
 ```
+
+### POST /api/analysis/run — Response (202 Accepted)
+```typescript
+{ runId: string; status: 'processing' }
+```
+Pipeline runs asynchronously in the background. Frontend polls `GET /api/analysis/:runId/status` for progress updates. On completion, fetches full results via `GET /api/analysis/:runId`.
+
+### GET /api/analysis/:runId/status — Response
+```typescript
+{
+  status: 'processing' | 'completed' | 'failed';
+  statusDetail: string | null;    // e.g. "AI reasoning: batch 5 of 34"
+  errorMessage: string | null;    // populated on failure
+  totalUsers: number;
+}
+```
+Includes stale run detection — runs processing for more than 20 minutes are reported as failed.
 
 ---
 
