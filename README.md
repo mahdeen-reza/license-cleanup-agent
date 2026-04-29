@@ -93,6 +93,11 @@ See [`architecture/pipeline_architecture.md`](architecture/pipeline_architecture
 - **Review chat** -- post-analysis conversation for reclassifying users, adding exceptions, flagging sporadic users, and querying results
 - **Living access criteria** -- per-instance criteria documents with versioning and AI-assisted updates
 - **System onboarding** -- self-serve flow for adding new SaaS systems; upload a CSV, review the AI-generated reasoning table, confirm, and the system goes live
+- **Async analysis pipeline** — POST returns 202 immediately; pipeline runs in background with real-time status polling. Frontend shows progress updates ("AI reasoning: batch 5 of 34"). Concurrent run guard prevents overlapping analyses. Stale runs auto-expire after 20 minutes.
+- **Parallel AI batching** — 8 concurrent API calls processing batches of 50 users each. Reduces AI reasoning step from ~8 minutes (sequential) to ~1 minute for 1700+ users.
+- **Prompt caching** — static system context cached across all batches via Anthropic's prompt caching. First batch pays full input cost + cache write; subsequent batches pay ~10% for the cached portion.
+- **In-progress runs** — resume incomplete reviews across sessions. Checkbox state persists to DB in real time; no progress is lost if the analyst navigates away.
+- **Ticket submission workflow** — pre-filled submission modal with justification and email list. Analyst submits via ticketing portal, records ticket number for audit trail. Run lifecycle: processing → review in progress → submitted.
 
 ---
 
