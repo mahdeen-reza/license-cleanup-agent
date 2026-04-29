@@ -1,6 +1,6 @@
 # PRD.md
 ## SaaS License Clean-Up Agent
-**Last Updated:** March 2026  
+**Last Updated:** April 2026  
 **Status:** In Development -- Phase 1  
 
 ---
@@ -39,7 +39,7 @@ This takes ~2 focused hours and ~1 full business day end-to-end due to competing
 
 ## Non-Goals
 
-- Automating user removal, ticket submission, or notifications (human executes all actions)
+- Automating user removal or notifications (human executes all actions). Ticket content is generated and the ticketing portal is opened, but the analyst submits the ticket manually.
 - Scheduling or triggering clean-ups automatically
 - Pulling data directly from usage platform or HR system APIs
 - Exposing APIs for other internal services to consume
@@ -59,6 +59,8 @@ This takes ~2 focused hours and ~1 full business day end-to-end due to competing
 
 ## Core User Flows
 
+**In-Progress Runs:** When an analyst opens the app, any runs that are completed but not yet submitted (review still in progress) are shown below the run configuration form. Each in-progress run shows instance, mode, date, and a progress bar indicating how many users have been reviewed. Analyst can click **Resume** to continue reviewing where they left off.
+
 ### Flow 1 -- Routine Monthly Clean-Up (Standard Mode)
 
 1. Analyst exports usage platform CSV for target instance and HR system report
@@ -66,14 +68,14 @@ This takes ~2 focused hours and ~1 full business day end-to-end due to competing
 3. Selects clean-up type: **Routine** | mode: **Standard**
 4. Uploads both CSV files
 5. Clicks **Run Analysis**
-6. Agent processes: normalizes emails -> joins HR data -> applies GTM framework -> classifies all users -> generates reasoning per user -> compares against previous run for this instance (if exists)
+6. Pipeline starts asynchronously -- app returns immediately with a progress indicator. Analyst sees real-time status updates (e.g. "AI reasoning: batch 5 of 34"). Agent processes: normalizes emails -> joins HR data -> applies GTM framework -> classifies all users -> generates reasoning per user -> compares against previous run for this instance (if exists)
 7. **Delta Summary Bar** appears (if not baseline run): shows counts of newly inactive, persistently inactive, recovered, reappeared, and net new users. Analyst uses this to prioritize review -- newly inactive first, then persistently inactive for quick confirmation.
 8. Results appear across 7 tabs: Direct Remove / Notify First / Ex-Employee / GTM Flagged / Prior Exception / Human Review / Excluded. Each row shows full employee details (name, department, division, title, product, region, manager, worker type, on leave) alongside activity fields and agent-generated classification, confidence, match tier, reasoning, and delta badge.
 9. Analyst reviews each tab -- reads per-user reasoning. **Checks the checkbox** on each user they accept for action. Unchecked users are logged as "deferred."
 10. Clicks **User History** on any row to open the side panel -- sees this user's full history on this instance (past classifications, actions taken, sporadic flags, chat overrides). Uses this to make informed decisions on borderline cases.
 11. Uses Review Chat to reclassify users, add exceptions, flag users as temporary/project-based access, or query results as needed (see Flow 4)
-12. Clicks **Confirm Selected** on Direct Remove tab -> tool generates copyable email list from checked users only, marks them as "actioned" in DB
-13. Pastes email list into support ticket
+12. Clicks **Submit Ticket** -> submission modal opens with pre-filled fields (summary, justification with email list, system, priority). Analyst reviews, clicks **Open Portal** to open the ticketing portal with content copied to clipboard, and submits.
+13. After submitting, enters the ticket number (e.g. TICKET-1234) back in the modal -> tool records ticket number, marks run as "submitted," and logs all actioned/deferred users in the audit trail.
 14. Repeats for Notify First tab -- sends notifications to checked users (using standard template)
 15. Escalates GTM Flagged and Prior Exception users with managers as needed
 
@@ -81,12 +83,12 @@ This takes ~2 focused hours and ~1 full business day end-to-end due to competing
 
 1. Support flags license shortage -- specifies minimum seats needed and deadline
 2. Analyst opens app -> selects instance -> selects **On-Demand**, enters minimum licenses needed, selects **Urgent** or **Critical** mode
-3. Uploads both CSVs -> runs analysis
+3. Uploads both CSVs -> runs analysis (pipeline runs asynchronously with progress tracking)
 4. Agent prioritizes output: lowest-risk removals ranked first to hit minimum target quickly. Delta Summary shows context from previous runs if available.
-5. Analyst works through Direct Remove list top-down, **checking off users** until minimum is met. Uses User History panel to quickly verify borderline cases.
+5. Analyst works through Direct Remove list top-down, **checking off users** until minimum is met. Checkboxes persist in real-time. Uses User History panel to quickly verify borderline cases.
 6. Uses Review Chat to adjust any classifications before finalizing (see Flow 4)
-7. Clicks **Confirm Selected** -> tool generates email list from checked users only, logs all as "actioned"
-8. Submits support ticket with minimum required email list
+7. Clicks **Submit Ticket** -> submission modal opens with pre-filled content, analyst submits via ticketing portal and records ticket number
+8. Tool finalizes run as "submitted" with ticket number for audit trail
 9. Continues with remaining list at own discretion
 
 ### Flow 3 -- User History Investigation (During Review)
@@ -222,7 +224,7 @@ Usage platform and HR system data is uploaded manually. Ticket submission is man
 | Auth | Authenticated access only -- no external access |
 | AI | Anthropic Claude API |
 | File upload | Manual in Phase 1 -- no API integrations |
-| Actions | Human-executed only -- no automated removals, notifications, or ticket submission |
+| Actions | Human-executed only -- no automated removals or notifications. Ticket content is generated but submitted manually via ticketing portal. |
 
 ---
 
@@ -254,12 +256,15 @@ Usage platform and HR system data is uploaded manually. Ticket submission is man
 - **User History View -- per-user timeline panel showing all past appearances, actions, flags, and overrides for a specific instance**
 - **Review Conversation -- post-analysis interactive chat (reclassify, add exceptions, flag sporadic users, query results and history)**
 - **Living Access Criteria -- per-instance criteria document with versioning and AI-assisted updates**
+- **Ticket Submission Workflow -- pre-filled modal, opens ticketing portal, records ticket number for audit trail**
+- **In-Progress Runs -- resume incomplete reviews, real-time progress tracking across sessions**
+- **Async Analysis Pipeline -- background processing with real-time status polling, eliminates timeout issues on large datasets**
 - New system onboarding flow (built in Phase 1, used in Phase 2)
 - Analysis run history and audit log
 
 **Out of scope (Phase 1):**
 - Additional systems (Phase 2)
-- Automated ticket submission
+- Fully automated ticket submission (tool generates content and opens portal, but analyst submits manually)
 - Automated notifications
 - Scheduled/recurring analysis triggers
 - Usage platform or HR system API integrations
